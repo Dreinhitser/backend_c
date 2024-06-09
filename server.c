@@ -27,12 +27,14 @@ int server_init(struct Server* server)
         printf("%s\n", strerror(errno));
         return -1;
     }
+
+    return 0;
 }
 
 // TODO
 int server_add_endpoint(struct Server* server, const char* endpoint_name)
 {
-
+    return 0;
 }
 
 int server_start(struct Server* server)
