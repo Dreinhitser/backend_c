@@ -1,16 +1,18 @@
 CC=gcc
-CFLAGS=-Wall
+CFLAGS=-c -Wall
+LDFLAGS=
 
-all: server
+SOURCES=main.c server.c
+OBJECTS=$(SOURCES:.c=.o)
+EXECUTABLE=server
 
-server: main.o  server.o
-	gcc main.o server.o -o server
+all: $(SOURCES) $(EXECUTABLE)
 
-main.o: main.c
-	gcc -c main.c
+$(EXECUTABLE): $(OBJECTS)
+	$(CC) $(LDFLAGS) $(OBJECTS) -o $@
 
-server.o: server.c
-	gcc -c server.c
+.c.o:
+	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -rf *.o server
+	rm -rf *.o $(EXECUTABLE)
