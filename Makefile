@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-c -Wall
-LDFLAGS=
+LDFLAGS=-pthread
 
 SOURCES=main.c server.c
 OBJECTS=$(SOURCES:.c=.o)

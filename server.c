@@ -41,10 +41,11 @@ int server_add_endpoint(struct Server* server, const char* endpoint_name)
     return 0;
 }
 
-void handle_client(int fd_client)
+void* handle_client(void* fd_client)
 {
+    int fd = *((int*)fd_client);
     char buffer[1024];
-    int recv_bytes = recv(fd_client, buffer, sizeof(buffer), NULL);
+    int recv_bytes = recv(fd, buffer, sizeof(buffer), 0);
     if (recv_bytes == -1)
     {
         printf("Error(handle_client): %s\n", strerror(errno));
@@ -54,10 +55,10 @@ void handle_client(int fd_client)
             clients_number--;
         }
         pthread_mutex_unlock(&m);
-        return;
+        return NULL;
     }
 
-    int send_bytes = send(fd_client, "Hello world\n", sizeof("Hello world\n"), NULL);
+    int send_bytes = send(fd, "Hello world\n", sizeof("Hello world\n"), 0);
     if (send_bytes == -1)
     {
         printf("Error(handle_client): %s\n", strerror(errno));
@@ -67,7 +68,7 @@ void handle_client(int fd_client)
             clients_number--;
         }
         pthread_mutex_unlock(&m);
-        return;
+        return NULL;
     }
 
     printf("Successfully closing function handle_client\n");
@@ -77,6 +78,8 @@ void handle_client(int fd_client)
         clients_number--;
     }
     pthread_mutex_unlock(&m);
+
+    return NULL;
 }
 
 int server_start(struct Server* server)
@@ -97,7 +100,7 @@ int server_start(struct Server* server)
             return -1;
         }
         pthread_t thread;
-        pthread_create(&thread, NULL, handle_client, fd_client);
+        pthread_create(&thread, NULL, (void*)handle_client, (void*)&fd_client);
         pthread_detach(thread);
     }
 
