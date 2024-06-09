@@ -8,6 +8,10 @@
 #include <errno.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <pthread.h>
+
+int clients_number = 0;
+pthread_mutex_t m;
 
 int server_init(struct Server* server)
 {
@@ -37,34 +41,67 @@ int server_add_endpoint(struct Server* server, const char* endpoint_name)
     return 0;
 }
 
+void handle_client(int fd_client)
+{
+    char buffer[1024];
+    int recv_bytes = recv(fd_client, buffer, sizeof(buffer), NULL);
+    if (recv_bytes == -1)
+    {
+        printf("Error(handle_client): %s\n", strerror(errno));
+        pthread_mutex_lock(&m);
+        if (clients_number > 0)
+        {
+            clients_number--;
+        }
+        pthread_mutex_unlock(&m);
+        return;
+    }
+
+    int send_bytes = send(fd_client, "Hello world\n", sizeof("Hello world\n"), NULL);
+    if (send_bytes == -1)
+    {
+        printf("Error(handle_client): %s\n", strerror(errno));
+        pthread_mutex_lock(&m);
+        if (clients_number > 0)
+        {
+            clients_number--;
+        }
+        pthread_mutex_unlock(&m);
+        return;
+    }
+
+    printf("Successfully closing function handle_client\n");
+    pthread_mutex_lock(&m);
+    if (clients_number > 0)
+    {
+        clients_number--;
+    }
+    pthread_mutex_unlock(&m);
+}
+
 int server_start(struct Server* server)
 {
-    if (listen(server->fd_socket, 5) == -1)
+    pthread_mutex_init(&m, NULL);
+    while (1)
     {
-        printf("%s\n", strerror(errno));
-        return -1;
+        if (listen(server->fd_socket, 5) == -1)
+        {
+            printf("%s\n", strerror(errno));
+            return -1;
+        }
+
+        int fd_client = accept(server->fd_socket, (struct sockaddr*)NULL, NULL);
+        if (fd_client == -1)
+        {
+            printf("%s\n", strerror(errno));
+            return -1;
+        }
+        pthread_t thread;
+        pthread_create(&thread, NULL, handle_client, fd_client);
+        pthread_detach(thread);
     }
 
-    int client = accept(server->fd_socket, (struct sockaddr*)NULL, NULL);
-    if (client == -1)
-    {
-        printf("%s\n", strerror(errno));
-        return -1;
-    }
-
-    int sent_bytes = send(client, "Hello world\n", sizeof("Hello world\n"), 0);
-    if (sent_bytes == -1)
-    {
-        printf("%s\n", strerror(errno));
-        return -1;
-    }
-    else if (sent_bytes < sizeof("Hello world\n"))
-    {
-        printf("All bytes %ld\n", sizeof("Hello world\n"));
-        printf("Sent bytes %d\n", sent_bytes);
-        return -1;
-    }
-
+    pthread_mutex_destroy(&m);
     close(server->fd_socket);
     
     return 0;
